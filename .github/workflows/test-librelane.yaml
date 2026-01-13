@@ -59,6 +59,10 @@ jobs:
           echo "Container: ${{ inputs.container_image }}"
           echo "Use nix-eda: ${{ inputs.use_nix }}"
 
+          # Create runs directory with proper permissions for container user (1000:1000)
+          mkdir -p runs
+          chmod 777 runs
+
           # Set LIBRELANE_CMD based on use_nix input
           if [ "${{ inputs.use_nix }}" = "true" ]; then
             LIBRELANE_CMD="librelane-nix"
