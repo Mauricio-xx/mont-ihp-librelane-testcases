@@ -71,8 +71,9 @@ jobs:
           fi
 
           # Run tests in container
-          # Note: Mount writable tmpfs for ciel cache at /foss/pdks/ciel
-          mkdir -p ciel_cache
+          # Create ciel cache directory with subdirectory structure for container user (1000:1000)
+          mkdir -p ciel_cache/ihp-sg13g2
+          chmod -R 777 ciel_cache
           docker run --rm \
             -v ${{ github.workspace }}:/foss/designs/testcases:rw \
             -v ${{ github.workspace }}/ciel_cache:/foss/pdks/ciel:rw \
