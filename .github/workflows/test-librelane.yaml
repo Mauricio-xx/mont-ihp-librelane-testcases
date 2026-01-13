@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2024-2025 IHP-EDA-Tools Contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# LibreLane RTL-to-GDS Test Workflow
+#
+# Triggered manually via workflow_dispatch to test IHP-EDA-Tools container builds.
+
+name: LibreLane Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      container_image:
+        description: 'Container image to test'
+        required: true
+        default: 'ghcr.io/mauricio-xx/ihp-eda-tools:latest'
+        type: string
+      designs:
+        description: 'Designs to test (space-separated, or "all")'
+        required: false
+        default: 'inverter user_proj_timer'
+        type: string
+      use_nix:
+        description: 'Use librelane-nix (nix-eda) for reproducible builds'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout testcases
+        uses: actions/checkout@v4
+
+      - name: Pull container image
+        run: |
+          echo "Pulling ${{ inputs.container_image }}..."
+          docker pull ${{ inputs.container_image }}
+
+      - name: Run LibreLane tests
+        run: |
+          echo "Testing designs: ${{ inputs.designs }}"
+          echo "Container: ${{ inputs.container_image }}"
+          echo "Use nix-eda: ${{ inputs.use_nix }}"
+
+          # Set LIBRELANE_CMD based on use_nix input
+          if [ "${{ inputs.use_nix }}" = "true" ]; then
+            LIBRELANE_CMD="librelane-nix"
+          else
+            LIBRELANE_CMD="librelane"
+          fi
+
+          # Run tests in container
+          docker run --rm \
+            -v ${{ github.workspace }}:/foss/designs/testcases:rw \
+            -e LIBRELANE_CMD="$LIBRELANE_CMD" \
+            -e RUNS_DIR="/foss/designs/testcases/runs" \
+            ${{ inputs.container_image }} \
+            --skip bash -c 'cd /foss/designs/testcases && ./run_tests.sh ${{ inputs.designs }}'
+
+      - name: List results
+        if: always()
+        run: |
+          echo "=== Test Results ==="
+          find runs -name "*.log" -type f 2>/dev/null | while read log; do
+            design=$(dirname "$log" | xargs basename)
+            if grep -q "error\|Error\|ERROR" "$log" 2>/dev/null; then
+              echo "[FAIL] $design"
+            else
+              echo "[PASS] $design"
+            fi
+          done || echo "No logs found"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: librelane-results-${{ github.run_number }}
+          path: runs/
+          retention-days: 30
+
+      - name: Upload GDS files
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: gds-outputs-${{ github.run_number }}
+          path: runs/**/*.gds
+          retention-days: 90
+          if-no-files-found: ignore

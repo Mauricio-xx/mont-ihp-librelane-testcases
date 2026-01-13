@@ -1,0 +1,29 @@
+# Test results
+runs/
+
+# Nix
+result
+.direnv/
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# LibreLane outputs (if accidentally in design dirs)
+designs/*/runs/
+designs/*/*.gds
+designs/*/*.def
+designs/*/*.odb
