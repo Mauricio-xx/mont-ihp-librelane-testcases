@@ -71,13 +71,13 @@ jobs:
           fi
 
           # Run tests in container
-          # Note: CIEL_HOME redirects ciel cache to writable location
+          # Note: Mount writable tmpfs for ciel cache at /foss/pdks/ciel
+          mkdir -p ciel_cache
           docker run --rm \
             -v ${{ github.workspace }}:/foss/designs/testcases:rw \
+            -v ${{ github.workspace }}/ciel_cache:/foss/pdks/ciel:rw \
             -e LIBRELANE_CMD="$LIBRELANE_CMD" \
             -e RUNS_DIR="/foss/designs/testcases/runs" \
-            -e CIEL_HOME="/tmp/ciel" \
-            -e XDG_CACHE_HOME="/tmp/cache" \
             ${{ inputs.container_image }} \
             --skip bash -c 'cd /foss/designs/testcases && ./run_tests.sh ${{ inputs.designs }}'
 
