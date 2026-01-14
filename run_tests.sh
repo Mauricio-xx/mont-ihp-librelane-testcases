@@ -27,14 +27,14 @@ RUNS_DIR="${RUNS_DIR:-$SCRIPT_DIR/runs/$RAND}"
 PDK="${PDK:-ihp-sg13g2}"
 STD_CELL_LIBRARY="${STD_CELL_LIBRARY:-sg13g2_stdcell}"
 
-# Detect PDK_ROOT - container vs local
-if [ -d "/foss/pdks" ]; then
-    PDK_ROOT="${PDK_ROOT:-/foss/pdks}"
-elif [ -n "${PDK_ROOT:-}" ]; then
-    : # Use provided PDK_ROOT
+# Detect PDK_ROOT - environment, container, or ciel
+if [ -n "${PDK_ROOT:-}" ]; then
+    echo "[INFO] PDK_ROOT from environment: $PDK_ROOT"
+elif [ -d "/foss/pdks/ihp-sg13g2" ]; then
+    PDK_ROOT="/foss/pdks"
+    echo "[INFO] Using container PDK: $PDK_ROOT"
 else
-    echo "[WARN] PDK_ROOT not set and /foss/pdks not found"
-    echo "[WARN] Will rely on nix-eda to provide PDK"
+    echo "[INFO] PDK_ROOT not set - will use ciel (nix-eda)"
 fi
 
 # LibreLane command - prefer librelane-nix for reproducibility
@@ -119,8 +119,10 @@ for design in $DESIGNS; do
         --condensed
     )
 
+    # Use --manual-pdk when PDK_ROOT is provided (bypasses ciel)
     if [ -n "${PDK_ROOT:-}" ]; then
-        LIBRELANE_ARGS+=(--pdk-root "$PDK_ROOT")
+        LIBRELANE_ARGS+=(--manual-pdk --pdk-root "$PDK_ROOT")
+        echo "[INFO] Using manual PDK: $PDK_ROOT"
     fi
 
     if $LIBRELANE_CMD "${LIBRELANE_ARGS[@]}" "$work_dir/config.json" > "$log_file" 2>&1; then

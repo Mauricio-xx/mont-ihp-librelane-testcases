@@ -53,6 +53,15 @@ jobs:
           echo "Pulling ${{ inputs.container_image }}..."
           docker pull ${{ inputs.container_image }}
 
+      - name: Clone IHP-Open-PDK (dev branch)
+        run: |
+          echo "Cloning IHP-Open-PDK dev branch..."
+          git clone --recursive --depth 1 -b dev \
+            https://github.com/IHP-GmbH/IHP-Open-PDK.git \
+            pdk
+          echo "PDK cloned to: $(pwd)/pdk"
+          ls -la pdk/
+
       - name: Run LibreLane tests
         run: |
           echo "Testing designs: ${{ inputs.designs }}"
@@ -70,15 +79,16 @@ jobs:
             LIBRELANE_CMD="librelane"
           fi
 
-          # Run tests in container
-          # Create ciel cache directory with subdirectory structure for container user (1000:1000)
-          mkdir -p ciel_cache/ihp-sg13g2
-          chmod -R 777 ciel_cache
+          # Run tests in container with custom PDK from dev branch
           docker run --rm \
             -v ${{ github.workspace }}:/foss/designs/testcases:rw \
-            -v ${{ github.workspace }}/ciel_cache:/foss/pdks/ciel:rw \
+            -v ${{ github.workspace }}/pdk:/foss/designs/pdk:ro \
             -e LIBRELANE_CMD="$LIBRELANE_CMD" \
             -e RUNS_DIR="/foss/designs/testcases/runs" \
+            -e PDK_ROOT="/foss/designs/pdk" \
+            -e PDK="ihp-sg13g2" \
+            -e STD_CELL_LIBRARY="sg13g2_stdcell" \
+            -e USE_MANUAL_PDK="true" \
             ${{ inputs.container_image }} \
             --skip bash -c 'cd /foss/designs/testcases && ./run_tests.sh ${{ inputs.designs }}'
 
